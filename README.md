@@ -1,6 +1,6 @@
 # `easyfuse` - simple FUSE volume driver for Docker
 
-Simple FUSE-based volume driver based on the local driver systax. By offloading volume mounting to a simple `mount -t fuse` subprocess call, the typical problem of https://github.com/moby/moby/issues/27103 does not apply.
+Simple FUSE-based docker volume driver based on the local driver systax. By offloading volume mounting to a simple `mount -t fuse` subprocess call, the typical problem of https://github.com/moby/moby/issues/27103 does not apply.
 
 The plugin uses legacy architecture (mounting as a unix socket) to expose to the user full host system capabilites of `mount`. This way, user can e.g. fully specify `uid` and `gid` volume mapping, use local system resources (e.g. SSH keys), something that is an annoying shortcoming of plugins such as `vieux/sshfs`.
 

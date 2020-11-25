@@ -17,206 +17,82 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import aiohttp.web
-import dataclasses
+import argparse
 import json
+import logging
 import os
-import subprocess
+
+from .Driver import Driver
+from .Handler import Handler
 
 
-def jsonify(obj, **kwargs):
-    return aiohttp.web.Response(text=json.dumps(obj), **kwargs)
+def main(opts):
+    logging.basicConfig(level=logging.INFO)
+    app = aiohttp.web.Application()
+    driver = Driver(opts)
+    handler = Handler(driver)
+    handler.install(app)
+    aiohttp.web.run_app(app, host=opts.host, port=opts.port, path=opts.sock)
 
-
-@dataclasses.dataclass
-class VolumeSpec:
-    name: str
-    instances: set
-    opts: dict
-    is_mounted: bool = False
-
-
-class DriverError(Exception):
-    pass
-
-
-class Driver:
-    def __init__(self):
-        self.volumes: dict[str, VolumeSpec] = {}
-        self._path = "/run/docker-easyfuse"
-        os.makedirs(self._path, mode=0o777, exist_ok=True)
-
-    def get_path_for(self, name: str):
-        return os.path.join(self._path, name)
-
-    def volume_create(self, name: str, opts: dict):
-        if name in self.volumes:
-            raise DriverError(f"Volume {name} already exist, remove it first.")
-        self.volumes[name] = VolumeSpec(name, set(), opts)
-
-    def volume_remove(self, name: str):
-        del self.volumes[name]
-
-    def volume_mount(self, name: str, vid: str):
-        try:
-            vol = self.volumes[name]
-        except KeyError:
-            raise DriverError(f"Volume {name} not found.")
-        vol.instances.add(vid)
-        if not vol.is_mounted:
-            # mount -t fuse -o [opts.o] [opts.device] [mountpoint]
-            cmd = ("mount", "-t", "fuse")
-            try:
-                cmd += ("-o", vol.opts["o"])
-            except KeyError:
-                pass
-            try:
-                cmd += (vol.opts["device"], )
-            except KeyError:
-                raise DriverError(f"Volume {name} missing option: device")
-            mntpt = self.get_path_for(name)
-            cmd += (mntpt, )
-            os.makedirs(mntpt, mode=0o777, exist_ok=True)
-            subprocess.run(cmd, check=True)
-            vol.is_mounted = True
-
-    def volume_unmount(self, name: str, vid: str):
-        try:
-            vol = self.volumes[name]
-        except KeyError:
-            raise DriverError(f"Volume {name} not found.")
-        try:
-            vol.instances.remove(vid)
-        except KeyError:
-            raise DriverError(f"Volume ID {vid} not found.")
-        if not vol.instances and vol.is_mounted:
-            mntpt = self.get_path_for(name)
-            cmd = ('umount', mntpt)
-            subprocess.run(cmd, check=True)
-            vol.is_mounted = False
-
-
-class Handler:
-    def __init__(self, driver: Driver):
-        self.driver = driver
-
-    async def handle_plugin_activate(self, request):
-        return jsonify({"Implements": ["VolumeDriver"]})
-
-    async def handle_volumedriver_create(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            opts = body['Opts']
-            self.driver.volume_create(name, opts)
-            return jsonify({"Err": ""})
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_remove(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            self.driver.volume_remove(name)
-            return jsonify({"Err": ""})
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_mount(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            vid = body['ID']
-            self.driver.volume_mount(name, vid)
-            return jsonify({
-                "Mountpoint": self.driver.get_path_for(name),
-                "Err": ""
-            })
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_path(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            return jsonify({
-                "Mountpoint": self.driver.get_path_for(name),
-                "Err": ""
-            })
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_unmount(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            vid = body['ID']
-            self.driver.volume_unmount(name, vid)
-            return jsonify({"Err": ""})
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_get(self, request):
-        try:
-            body = await request.json()
-            name = body['Name']
-            print(name)
-            return jsonify({
-                "Volume": {
-                    "Name": name,
-                    "Mountpoint": self.driver.get_path_for(name),
-                    "Status": {
-                        "Mounted": self.driver.volumes[name].is_mounted
-                    }
-                },
-                "Err": ""
-            })
-        except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"})
-        except DriverError as e:
-            return jsonify({"Err": str(e)})
-
-    async def handle_volumedriver_list(self, request):
-        return jsonify({
-            "Volumes": [{
-                "Name": name,
-                "Mountpoint": self.driver.get_path_for(name)
-            } for name in self.driver.volumes],
-            "Err":
-            ""
-        })
-
-    async def handle_volumedriver_capabilities(self, request):
-        return jsonify({"Capabilities": {"Scope": "global"}})
-
-
-app = aiohttp.web.Application()
-driver = Driver()
-handler = Handler(driver)
-app.add_routes([
-    aiohttp.web.post('/Plugin.Activate', handler.handle_plugin_activate),
-    aiohttp.web.post('/VolumeDriver.Create',
-                     handler.handle_volumedriver_create),
-    aiohttp.web.post('/VolumeDriver.Remove',
-                     handler.handle_volumedriver_remove),
-    aiohttp.web.post('/VolumeDriver.Mount', handler.handle_volumedriver_mount),
-    aiohttp.web.post('/VolumeDriver.Path', handler.handle_volumedriver_path),
-    aiohttp.web.post('/VolumeDriver.Unmount',
-                     handler.handle_volumedriver_unmount),
-    aiohttp.web.post('/VolumeDriver.Get', handler.handle_volumedriver_get),
-    aiohttp.web.post('/VolumeDriver.List', handler.handle_volumedriver_list),
-    aiohttp.web.post('/VolumeDriver.Capabilities',
-                     handler.handle_volumedriver_capabilities),
-])
 
 if __name__ == '__main__':
-    aiohttp.web.run_app(app)
+    DEFAULT_PORT = os.environ.get('EASYFUSE_SOCK_PORT', None)
+    DEFAULT_HOST = os.environ.get('EASYFUSE_SOCK_HOST', None)
+    DEFAULT_SOCK = os.environ.get('EASYFUSE_UNIX_SOCK', None)
+    DEFAULT_MOUNT_PATH = os.environ.get('EASYFUSE_MOUNT_PATH',
+                                        "/run/easyfuse/mntpt")
+    DEFAULT_MOUNT_DB = os.environ.get('EASYFUSE_MOUNT_DB',
+                                      "/run/easyfuse/mntdb.json")
+
+    argparser = argparse.ArgumentParser(
+        'easyfuse',
+        description="""\
+        Simple FUSE-based docker volume driver based on the local driver systax.
+        """,
+        epilog="""\
+        Default argument values are taken from corresponding environment variables.
+        PORT/HOST/SOCK arguments are passed directly to the built-in aiohttp server, meaning
+        all-None configuration results in a 0.0.0.0:8080 server.
+
+        Use of Unix socket is recommended.
+        """)
+    argparser.add_argument(
+        "-p",
+        "--port",
+        default=DEFAULT_PORT,
+        type=int,
+        help=
+        f"TCP port to bind to (default: {DEFAULT_PORT} [EASYFUSE_SOCK_PORT])")
+    argparser.add_argument(
+        "-b",
+        "--host",
+        default=DEFAULT_HOST,
+        type=str,
+        help=
+        f"TCP host to bind to (default: {DEFAULT_HOST} [EASYFUSE_SOCK_HOST])")
+    argparser.add_argument(
+        "-s",
+        "--sock",
+        default=DEFAULT_SOCK,
+        type=str,
+        help=
+        f"UNIX socket to bind to (default: {DEFAULT_SOCK} [EASYFUSE_UNIX_SOCK])"
+    )
+    argparser.add_argument(
+        "-m",
+        "--mntpt",
+        default=DEFAULT_MOUNT_PATH,
+        type=str,
+        help=
+        f"base mount point; if exists, must be writeable (default: {DEFAULT_MOUNT_PATH} [EASYFUSE_MOUNT_PATH])"
+    )
+    argparser.add_argument(
+        "-d",
+        "--mntdb",
+        default=DEFAULT_MOUNT_DB,
+        type=str,
+        help=
+        f"mount database location; the location must be writeable (default: {DEFAULT_MOUNT_DB} [EASYFUSE_MOUNT_DB])"
+    )
+    args = argparser.parse_args()
+    main(args)
