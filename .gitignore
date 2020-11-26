@@ -1,6 +1,20 @@
 # Python cache
-**/*.pyc
-**/__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+env.bak/
+venv.bak/
+
+# Python distribution/packaging
+*.egg-info
+dist/
+build/
 
 # IDE configuration
 .vscode
