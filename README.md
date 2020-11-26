@@ -6,6 +6,104 @@ The plugin uses legacy architecture (mounting as a unix socket) to expose to the
 
 Initially, the plugin was developed to allow using SSHFS in scenario, where `vieux/sshfs` simply wouldn't work, and after discovering _why_ the `local` driver would not work with fuse mount type. Hovever, in theory this plugin should work with any `fuse`-mounted filesystem (and in future, possibly even others).
 
+### Permissions
+
+Currently, since easyfuse uses `mount` for creating actual fuse volumes, `easyfuse` must be ran as root. This may change in future versions.
+
+## Package dependencies
+
+It's relatively easy to run `easyfuse` without actually installing the package, nevertheless it 
+requires some non-standard third party Python libraries. To start, simply install module dependencies 
+(see [requirements.txt]), either with
+
+```
+sudo python3 -m pip install -r requirements.txt
+```
+
+or (preferably) with your system package manager, e.g. for Debian/Ubuntu:
+
+```
+sudo apt install python3-aiohttp
+```
+
+When using `pip`, make sure the packages are installed globally, as `easyfuse` currently needs to be ran as root.
+
+## Local installation in virtual environment
+
+`easyfuse` should have no problems working out of a python virtual environment.
+Simply initialize a virtual environment and install the package locally:
+
+```
+$ python3 -m venv venv
+$ source venv/bin/activate
+(venv) $ pip install -e .
+```
+
+This will pull all local requirements, without interfering with the system and system's package
+managers.
+
+When running from venv with `sudo`, you may need to manually point to the venv's python as virtual
+environment variables are not inherited by `sudo`-ed process, see:
+
+```
+# locally installed aiohttp in version 3.5.1, venv installed aiohttp in version 3.7.3:
+(venv) $ python3 -c 'import aiohttp; print(aiohttp.__version__)'
+3.7.3
+(venv) $ sudo python3 -c 'import aiohttp; print(aiohttp.__version__)'
+3.5.1
+```
+
+Instead, simply use `venv/bin/python` explicitly:
+
+```
+(venv) $ sudo venv/bin/python -c 'import aiohttp; print(aiohttp.__version__)'
+3.7.3
+```
+
+## Running manually (without installation)
+
+To run in a stand-alone mode (preferred for development), start in the main directory and simply run
+
+```
+sudo python3 -m easyfuse -s /run/docker/plugins/easyfuse.sock
+```
+
+see `python3 -m easyfuse -h` (no `sudo` required) for full list of available options.
+
+## Running with `systemd` (with or without installation)
+
+`systemd` folder contains basic systemd unit files for socket activation, either for global and local
+setup.
+Assuming `/etc/systemd/system` as the configuration path of choice, typical activation for a local setup would be:
+
+```
+$ SYSTEMD_UNIT_TARGET=/etc/systemd/system
+$ sudo cp systemd/easyfuse.socket $SYSTEMD_UNIT_TARGET/
+$ WORKDIR=$PWD envsubst '$WORKDIR' < systemd/easyfuse.service.dev | sudo tee $SYSTEMD_UNIT_TARGET/easyfuse.service
+$ sudo systemctl daemon-reload
+$ sudo systemctl start easyfuse.socket
+```
+
+When using virtualenv, use the appropriate config:
+
+```
+(venv) $ SYSTEMD_UNIT_TARGET=/etc/systemd/system
+(venv) $ sudo cp systemd/easyfuse.socket $SYSTEMD_UNIT_TARGET/
+(venv) $ envsubst '$VIRTUAL_ENV' < systemd/easyfuse.service.venv | sudo tee $SYSTEMD_UNIT_TARGET/easyfuse.service
+(venv) $ sudo systemctl daemon-reload
+(venv) $ sudo systemctl start easyfuse.socket
+```
+
+For a global installation (i.e. if you can call `python3 -m easyfuse -h` as root from anywhere, without virtual environment), simply use:
+
+```
+$ SYSTEMD_UNIT_TARGET=/etc/systemd/system
+$ sudo cp systemd/easyfuse.socket  $SYSTEMD_UNIT_TARGET/
+$ sudo cp systemd/easyfuse.service $SYSTEMD_UNIT_TARGET/
+$ sudo systemctl daemon-reload
+$ sudo systemctl start easyfuse.socket
+```
+
 ## Using `easyfuse` with docker volume
 
 Note: when using SSHFS, make sure the host key is accepted by the root user (or whatever user is running the mount command). This can be done by simply doing `sudo ssh user@my-ssh-host` and verifying the public key, or with `ssh-keyscan >> /root/.ssh/known_hosts`.
@@ -120,7 +218,3 @@ Removing examples_mytest_1 ... done
 Removing network examples_default
 Removing volume examples_nas
 ```
-
-# Permissions
-
-Currently, since easyfuse uses `mount` for creating actual fuse volumes, `easyfuse` must be ran as root. This may change in future versions.

@@ -1,0 +1,9 @@
+[Unit]
+    Description=easyfuse Docker Volume Plugin socket
+    PartOf=easyfuse.service
+
+[Socket]
+    ListenStream=/run/docker/plugins/easyfuse.sock
+
+[Install]
+    WantedBy=docker.service

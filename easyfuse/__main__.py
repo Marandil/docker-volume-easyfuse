@@ -21,6 +21,7 @@ import argparse
 import json
 import logging
 import os
+import socket
 
 from .Driver import Driver
 from .Handler import Handler
@@ -32,7 +33,16 @@ def main(opts):
     driver = Driver(opts)
     handler = Handler(driver)
     handler.install(app)
-    aiohttp.web.run_app(app, host=opts.host, port=opts.port, path=opts.sock)
+    if opts.systemd:
+        SD_LISTEN_FDS_START = 3
+        sock = socket.fromfd(SD_LISTEN_FDS_START, socket.AF_UNIX,
+                             socket.SOCK_STREAM)
+        aiohttp.web.run_app(app, sock=sock)
+    else:
+        aiohttp.web.run_app(app,
+                            host=opts.host,
+                            port=opts.port,
+                            path=opts.sock)
 
 
 if __name__ == '__main__':
@@ -44,17 +54,19 @@ if __name__ == '__main__':
     DEFAULT_MOUNT_DB = os.environ.get('EASYFUSE_MOUNT_DB',
                                       "/run/easyfuse/mntdb.json")
 
-    argparser = argparse.ArgumentParser(
-        'easyfuse',
-        description="""\
+    argparser = argparse.ArgumentParser('easyfuse',
+                                        description="""\
         Simple FUSE-based docker volume driver based on the local driver systax.
         """,
-        epilog="""\
+                                        epilog="""\
         Default argument values are taken from corresponding environment variables.
         PORT/HOST/SOCK arguments are passed directly to the built-in aiohttp server, meaning
         all-None configuration results in a 0.0.0.0:8080 server.
 
         Use of Unix socket is recommended.
+
+        When using systemd socket activation (-S | --systemd), PORT/HOST/SOCK arguments are
+        ignored.
         """)
     argparser.add_argument(
         "-p",
@@ -78,6 +90,13 @@ if __name__ == '__main__':
         help=
         f"UNIX socket to bind to (default: {DEFAULT_SOCK} [EASYFUSE_UNIX_SOCK])"
     )
+    argparser.add_argument(
+        "-S",
+        "--systemd",
+        default=False,
+        action='store_true',
+        help=
+        "use fd 3 (SD_LISTEN_FDS_START); used for systemd socket activation")
     argparser.add_argument(
         "-m",
         "--mntpt",

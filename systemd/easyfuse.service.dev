@@ -1,0 +1,13 @@
+[Unit]
+    Description=easyfuse Docker Volume Plugin
+    After=easyfuse.socket
+    Requires=easyfuse.socket
+
+[Service]
+    Type=simple
+    Environment=PYTHONPATH=$WORKDIR
+    ExecStart=/usr/bin/env python3 -m easyfuse -S
+    TimeoutStopSec=10
+
+[Install]
+    WantedBy=docker.target
