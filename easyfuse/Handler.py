@@ -135,7 +135,8 @@ class Handler:
             ""
         })
 
-    async def handle_volumedriver_capabilities(self, request: aiohttp.web.Request):
+    async def handle_volumedriver_capabilities(self,
+                                               request: aiohttp.web.Request):
         logger.info(request.path)
         return jsonify({"Capabilities": {"Scope": "global"}})
 

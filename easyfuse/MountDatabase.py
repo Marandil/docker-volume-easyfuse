@@ -85,8 +85,11 @@ class MountDatabase:
             return spec
 
     def get_ro(self, key) -> VolumeSpec:
-        """ Same as __getitem__, but doesn't mark the entry as "dirty" and therefore
-        doesn't require updating all entries on exit when all volumes are only read. """
+        """
+        Same as __getitem__, but doesn't mark the entry as "dirty" and
+        therefore doesn't require updating all entries on exit when all
+        volumes are only read.
+        """
         try:
             return self._dirty[key]
         except KeyError:

@@ -8,6 +8,3 @@
     Environment=PYTHONPATH=$WORKDIR
     ExecStart=/usr/bin/env python3 -m easyfuse -S
     TimeoutStopSec=10
-
-[Install]
-    WantedBy=docker.target

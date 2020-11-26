@@ -12,16 +12,12 @@ setup(
     description='simple FUSE volume driver for Docker',
     long_description=long_description,
     long_description_content_type='text/markdown',
-
+    url="https://github.com/Marandil/docker-volume-easyfuse",
     author="Marcin Słowik",
     author_email="me@marandil.pl",
-
     packages=find_packages(),
-    include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        'aiohttp'
-    ],
+    install_requires=['aiohttp'],
     python_requires='>=3.6',
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -30,4 +26,12 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: POSIX :: Linux",
     ],
+    include_package_data=True,
+    package_data={'easyfuse': ['systemd/*']},
+    data_files=[('share/easyfuse/systemd', [
+        'systemd/easyfuse.socket',
+        'systemd/easyfuse.service',
+        'systemd/easyfuse.service.dev',
+        'systemd/easyfuse.service.venv'
+    ])],
 )

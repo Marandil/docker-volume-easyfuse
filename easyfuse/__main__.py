@@ -55,63 +55,58 @@ if __name__ == '__main__':
                                       "/run/easyfuse/mntdb.json")
 
     argparser = argparse.ArgumentParser('easyfuse',
-                                        description="""\
-        Simple FUSE-based docker volume driver based on the local driver systax.
+                                        description="""
+        Simple FUSE-based docker volume driver based on the local driver
+        syntax.
         """,
-                                        epilog="""\
-        Default argument values are taken from corresponding environment variables.
-        PORT/HOST/SOCK arguments are passed directly to the built-in aiohttp server, meaning
-        all-None configuration results in a 0.0.0.0:8080 server.
+                                        epilog="""
+        Default argument values are taken from corresponding environment
+        variables. PORT/HOST/SOCK arguments are passed directly to the
+        built-in aiohttp server, meaning all-None configuration results in a
+        0.0.0.0:8080 server.
 
         Use of Unix socket is recommended.
 
-        When using systemd socket activation (-S | --systemd), PORT/HOST/SOCK arguments are
-        ignored.
+        When using systemd socket activation (-S | --systemd), PORT/HOST/SOCK
+        arguments are ignored.
         """)
-    argparser.add_argument(
-        "-p",
-        "--port",
-        default=DEFAULT_PORT,
-        type=int,
-        help=
-        f"TCP port to bind to (default: {DEFAULT_PORT} [EASYFUSE_SOCK_PORT])")
-    argparser.add_argument(
-        "-b",
-        "--host",
-        default=DEFAULT_HOST,
-        type=str,
-        help=
-        f"TCP host to bind to (default: {DEFAULT_HOST} [EASYFUSE_SOCK_HOST])")
-    argparser.add_argument(
-        "-s",
-        "--sock",
-        default=DEFAULT_SOCK,
-        type=str,
-        help=
-        f"UNIX socket to bind to (default: {DEFAULT_SOCK} [EASYFUSE_UNIX_SOCK])"
-    )
-    argparser.add_argument(
-        "-S",
-        "--systemd",
-        default=False,
-        action='store_true',
-        help=
-        "use fd 3 (SD_LISTEN_FDS_START); used for systemd socket activation")
+    argparser.add_argument("-p",
+                           "--port",
+                           default=DEFAULT_PORT,
+                           type=int,
+                           help="TCP port to bind to "
+                           f"(default: {DEFAULT_PORT} [EASYFUSE_SOCK_PORT])")
+    argparser.add_argument("-b",
+                           "--host",
+                           default=DEFAULT_HOST,
+                           type=str,
+                           help="TCP host to bind to "
+                           f"(default: {DEFAULT_HOST} [EASYFUSE_SOCK_HOST])")
+    argparser.add_argument("-s",
+                           "--sock",
+                           default=DEFAULT_SOCK,
+                           type=str,
+                           help="UNIX socket to bind to "
+                           f"(default: {DEFAULT_SOCK} [EASYFUSE_UNIX_SOCK])")
+    argparser.add_argument("-S",
+                           "--systemd",
+                           default=False,
+                           action='store_true',
+                           help="use fd 3 (SD_LISTEN_FDS_START); "
+                           "used for systemd socket activation")
     argparser.add_argument(
         "-m",
         "--mntpt",
         default=DEFAULT_MOUNT_PATH,
         type=str,
-        help=
-        f"base mount point; if exists, must be writeable (default: {DEFAULT_MOUNT_PATH} [EASYFUSE_MOUNT_PATH])"
-    )
+        help="base mount point; if exists, must be writeable "
+        f"(default: {DEFAULT_MOUNT_PATH} [EASYFUSE_MOUNT_PATH])")
     argparser.add_argument(
         "-d",
         "--mntdb",
         default=DEFAULT_MOUNT_DB,
         type=str,
-        help=
-        f"mount database location; the location must be writeable (default: {DEFAULT_MOUNT_DB} [EASYFUSE_MOUNT_DB])"
-    )
+        help="mount database location; the location must be writeable "
+        f"(default: {DEFAULT_MOUNT_DB} [EASYFUSE_MOUNT_DB])")
     args = argparser.parse_args()
     main(args)

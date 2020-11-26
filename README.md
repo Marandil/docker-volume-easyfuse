@@ -104,6 +104,17 @@ $ sudo systemctl daemon-reload
 $ sudo systemctl start easyfuse.socket
 ```
 
+### Automatic systemd setup
+
+`easyfuse` provides a simple automatic `systemd` setup via `easyfuse.systemd_setup` script-module. 
+See `python3 -m easyfuse.systemd_setup -h` for reference. Remember that when using `sudo` with `venv`,
+you need to use the `venv` symlink instead of `python3`:
+
+```
+(venv) $ sudo python3 -m easyfuse.systemd_setup venv          # <- this will install using the global python
+(venv) $ sudo venv/bin/python3 -m easyfuse.systemd_setup venv # <- this will install using the local venv
+```
+
 ## Using `easyfuse` with docker volume
 
 Note: when using SSHFS, make sure the host key is accepted by the root user (or whatever user is running the mount command). This can be done by simply doing `sudo ssh user@my-ssh-host` and verifying the public key, or with `ssh-keyscan >> /root/.ssh/known_hosts`.

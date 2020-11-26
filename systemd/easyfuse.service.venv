@@ -7,6 +7,3 @@
     Type=simple
     ExecStart=$VIRTUAL_ENV/bin/python -m easyfuse -S
     TimeoutStopSec=10
-
-[Install]
-    WantedBy=docker.target
