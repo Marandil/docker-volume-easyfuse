@@ -7,8 +7,8 @@ here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
-    name='easyfuse',
-    version='0.2.0',
+    name='docker-volume-easyfuse',
+    version='0.2.1',
     description='simple FUSE volume driver for Docker',
     long_description=long_description,
     long_description_content_type='text/markdown',
