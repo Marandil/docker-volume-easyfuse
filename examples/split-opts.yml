@@ -1,0 +1,66 @@
+version: '3.4'
+
+services:
+  mytest:
+    image: alpine
+    volumes:
+      - 'nas1:/nas1:rw'
+      - 'nas2:/nas2:rw'
+      - 'nas3:/nas3:rw'
+    command: [sh, -c, 'touch /nas1/test1; ls -lah /nas1; touch /nas2/test2; ls -lah /nas2; touch /nas3/test3; ls -lah /nas3;']
+
+volumes:
+  nas1:
+    driver: easyfuse
+    driver_opts:
+      opts: |
+        IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key
+        UserKnownHostsFile=$PWD/mini-sshfs/known_hosts
+        Port=2022
+        uid=1001
+        gid=1001
+        users
+        idmap=user
+        noatime
+        allow_other
+        _netdev
+        reconnect
+        rw
+      device: "sshfs#$USER@localhost:$PWD/test"
+      
+  nas2:
+    driver: easyfuse
+    driver_opts:
+      driver: fuse
+      opts: |
+        IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key
+        UserKnownHostsFile=$PWD/mini-sshfs/known_hosts
+        Port=2022
+        uid=1002
+        gid=1002
+        users
+        idmap=user
+        noatime
+        allow_other
+        _netdev
+        reconnect
+        rw
+      device: "sshfs#$USER@localhost:$PWD/test"
+      
+  nas3:
+    driver: easyfuse
+    driver_opts:
+      mount_command: "sshfs [-o {opts}] {device} {target}"
+      unmount_command: "fusermount -u {target}"
+      opts: |
+        IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key
+        UserKnownHostsFile=$PWD/mini-sshfs/known_hosts
+        Port=2022
+        uid=1002
+        gid=1002
+        idmap=user
+        noatime
+        allow_other
+        reconnect
+        rw
+      device: "$USER@localhost:$PWD/test"

@@ -8,7 +8,7 @@ HostKey $HERE/.keys/ssh_host_rsa_key
 HostKey $HERE/.keys/ssh_host_ecdsa_key
 HostKey $HERE/.keys/ssh_host_ed25519_key
 
-AuthorizedKeysFile=$HERE/authorized_keys
-AllowUsers=$USER
+AuthorizedKeysFile $HERE/authorized_keys
+AllowUsers $USER
 
 LogLevel DEBUG3

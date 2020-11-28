@@ -28,17 +28,50 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
+class MountOptions:
+    device: str
+    opts: str = ''
+    driver: str = 'fuse'
+    mount_command: str = 'mount -t {driver} [-o {opts}] {device} {target}'
+    unmount_command: str = 'umount {target}'
+
+
+@dataclasses.dataclass
 class VolumeSpec:
     name: str
-    instances: set
-    opts: dict
+    instances: list
+    opts: MountOptions
     is_mounted: bool = False
+
+
+class DatabaseJSONEncoder(json.JSONEncoder):
+    def __init__(self, **kwargs):
+        super().__init__(sort_keys=True, **kwargs)
+
+    def default(self, obj: object):
+        if dataclasses.is_dataclass(obj):
+            return dataclasses.asdict(obj)
+        return super().default(obj)
+
+
+class DatabaseJSONDecoder(json.JSONDecoder):
+    def __init__(self, **kwargs):
+        super().__init__(object_hook=self._object_hook, **kwargs)
+
+    def _object_hook(self, obj: dict):
+        if VolumeSpec.__annotations__.keys() == obj.keys():
+            return VolumeSpec(**obj)
+        elif MountOptions.__annotations__.keys() == obj.keys():
+            return MountOptions(**obj)
+        return obj
 
 
 class MountDatabase:
     def __init__(self, dbpath: str):
         self._lock = asyncio.Lock()
         self._path = dbpath
+        self._encoder = DatabaseJSONEncoder()
+        self._decoder = DatabaseJSONDecoder()
         self._db: dict = None
         self._dbhash: int = 0
         self._dirty: dict = None
@@ -48,71 +81,34 @@ class MountDatabase:
         try:
             with open(self._path, 'r') as fdb:
                 s = fdb.read()
-            self._db = json.loads(s)
+            self._db = self._decoder.decode(s)
             logger.debug(f"Loaded mntdb {self._path} -> {s}")
         except FileNotFoundError:
             s = "{}"
             self._db = {}
             logger.debug(f"mntdb {self._path} not found -> {s}")
         self._dbhash = hash(s)
-        self._dirty = dict()
 
     async def __aexit__(self, exc_type, exc_value, exc_tb):
-        for key, entry in self._dirty.items():
-            try:
-                db_entry = self._db[key]
-            except KeyError:
-                db_entry = self._db[key] = {}
-            self._update_db(db_entry, entry)
-        s = json.dumps(self._db, sort_keys=True)
+        s = self._encoder.encode(self._db)
         if hash(s) != self._dbhash:
             logger.debug(f"Saving mntdb {self._path} <- {s}")
             with open(self._path, 'w') as fdb:
                 fdb.write(s)
         self._db = None
         self._lock.release()
-        self._dirty = None
 
     def __contains__(self, key):
         return key in self._db
 
     def __getitem__(self, key) -> VolumeSpec:
-        try:
-            return self._dirty[key]
-        except KeyError:
-            db_entry = self._db[key]
-            self._dirty[key] = spec = self._read_db(db_entry)
-            return spec
-
-    def get_ro(self, key) -> VolumeSpec:
-        """
-        Same as __getitem__, but doesn't mark the entry as "dirty" and
-        therefore doesn't require updating all entries on exit when all
-        volumes are only read.
-        """
-        try:
-            return self._dirty[key]
-        except KeyError:
-            return self._read_db(self._db[key])
+        return self._db[key]
 
     def keys(self) -> Set[str]:
-        return set(self._dirty.keys() | self._db.keys())
+        return set(self._db.keys())
 
     def __setitem__(self, key, value: VolumeSpec):
-        self._dirty[key] = value
+        self._db[key] = value
 
     def __delitem__(self, key):
         del self._db[key]
-
-    def _read_db(self, db_entry: dict) -> VolumeSpec:
-        return VolumeSpec(
-            name=db_entry['name'],
-            instances=set(db_entry['instances']),
-            opts=db_entry['opts'],
-            is_mounted=db_entry['is_mounted'])
-
-    def _update_db(self, db_entry: dict, value: VolumeSpec):
-        db_entry['name'] = value.name
-        db_entry['instances'] = list(value.instances)
-        db_entry['opts'] = value.opts
-        db_entry['is_mounted'] = value.is_mounted
