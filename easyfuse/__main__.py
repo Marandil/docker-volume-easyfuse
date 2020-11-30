@@ -27,6 +27,15 @@ from .Handler import Handler
 
 
 def main(opts):
+    """
+    Main entrypoint for the docker volume plugin service.
+    :param opts:  Namespace containing at least the following fields:
+                   * systemd: bool - if True, the service is started as socket activated and attempts
+                     to listen on fd 3.
+                   * host: str, port: int, path: str (may be None) - passed directly to aiohttp if not
+                     running in systemd socket activated mode.
+                  The remaining options are consumed by the :class:`Driver`.
+    """
     logging.basicConfig(level=logging.INFO)
     app = aiohttp.web.Application()
     driver = Driver(opts)
@@ -34,24 +43,18 @@ def main(opts):
     handler.install(app)
     if opts.systemd:
         SD_LISTEN_FDS_START = 3
-        sock = socket.fromfd(SD_LISTEN_FDS_START, socket.AF_UNIX,
-                             socket.SOCK_STREAM)
+        sock = socket.fromfd(SD_LISTEN_FDS_START, socket.AF_UNIX, socket.SOCK_STREAM)
         aiohttp.web.run_app(app, sock=sock)
     else:
-        aiohttp.web.run_app(app,
-                            host=opts.host,
-                            port=opts.port,
-                            path=opts.sock)
+        aiohttp.web.run_app(app, host=opts.host, port=opts.port, path=opts.sock)
 
 
 if __name__ == '__main__':
     DEFAULT_PORT = os.environ.get('EASYFUSE_SOCK_PORT', None)
     DEFAULT_HOST = os.environ.get('EASYFUSE_SOCK_HOST', None)
     DEFAULT_SOCK = os.environ.get('EASYFUSE_UNIX_SOCK', None)
-    DEFAULT_MOUNT_PATH = os.environ.get('EASYFUSE_MOUNT_PATH',
-                                        "/run/easyfuse/mntpt")
-    DEFAULT_MOUNT_DB = os.environ.get('EASYFUSE_MOUNT_DB',
-                                      "/run/easyfuse/mntdb.json")
+    DEFAULT_MOUNT_PATH = os.environ.get('EASYFUSE_MOUNT_PATH', "/run/easyfuse/mntpt")
+    DEFAULT_MOUNT_DB = os.environ.get('EASYFUSE_MOUNT_DB', "/run/easyfuse/mntdb.json")
 
     argparser = argparse.ArgumentParser('easyfuse',
                                         description="""
@@ -93,19 +96,17 @@ if __name__ == '__main__':
                            action='store_true',
                            help="use fd 3 (SD_LISTEN_FDS_START); "
                            "used for systemd socket activation")
-    argparser.add_argument(
-        "-m",
-        "--mntpt",
-        default=DEFAULT_MOUNT_PATH,
-        type=str,
-        help="base mount point; if exists, must be writeable "
-        f"(default: {DEFAULT_MOUNT_PATH} [EASYFUSE_MOUNT_PATH])")
-    argparser.add_argument(
-        "-d",
-        "--mntdb",
-        default=DEFAULT_MOUNT_DB,
-        type=str,
-        help="mount database location; the location must be writeable "
-        f"(default: {DEFAULT_MOUNT_DB} [EASYFUSE_MOUNT_DB])")
+    argparser.add_argument("-m",
+                           "--mntpt",
+                           default=DEFAULT_MOUNT_PATH,
+                           type=str,
+                           help="base mount point; if exists, must be writeable "
+                           f"(default: {DEFAULT_MOUNT_PATH} [EASYFUSE_MOUNT_PATH])")
+    argparser.add_argument("-d",
+                           "--mntdb",
+                           default=DEFAULT_MOUNT_DB,
+                           type=str,
+                           help="mount database location; the location must be writeable "
+                           f"(default: {DEFAULT_MOUNT_DB} [EASYFUSE_MOUNT_DB])")
     args = argparser.parse_args()
     main(args)

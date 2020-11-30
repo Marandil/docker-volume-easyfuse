@@ -26,7 +26,13 @@ from .parse_command import ParserError
 logger = logging.getLogger(__name__)
 
 
-def jsonify(obj, **kwargs):
+def _jsonify(obj, **kwargs):
+    """
+    Convert `obj` to json and then to aiohttp `Response` object, passing the given `kwargs` to its
+    constructor.
+    :param obj: Any default json-convertible object.
+    :param kwargs: Collection of named arguments, passed down to aiohttp `Response`.
+    """
     return aiohttp.web.Response(text=json.dumps(obj), **kwargs)
 
 
@@ -35,7 +41,7 @@ class Handler:
         self.driver = driver
 
     async def handle_plugin_activate(self, request: aiohttp.web.Request):
-        return jsonify({"Implements": ["VolumeDriver"]})
+        return _jsonify({"Implements": ["VolumeDriver"]})
 
     async def handle_volumedriver_create(self, request: aiohttp.web.Request):
         try:
@@ -44,11 +50,11 @@ class Handler:
             name = body['Name']
             opts = body['Opts']
             await self.driver.volume_create(name, opts)
-            return jsonify({"Err": ""})
+            return _jsonify({"Err": ""})
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except DriverError as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_remove(self, request: aiohttp.web.Request):
         try:
@@ -56,11 +62,11 @@ class Handler:
             logger.info(f"{request.path} -> {body}")
             name = body['Name']
             await self.driver.volume_remove(name)
-            return jsonify({"Err": ""})
+            return _jsonify({"Err": ""})
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except DriverError as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_mount(self, request: aiohttp.web.Request):
         try:
@@ -69,28 +75,22 @@ class Handler:
             name = body['Name']
             vid = body['ID']
             await self.driver.volume_mount(name, vid)
-            return jsonify({
-                "Mountpoint": self.driver.get_path_for(name),
-                "Err": ""
-            })
+            return _jsonify({"Mountpoint": self.driver.get_path_for(name), "Err": ""})
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except (DriverError, ParserError) as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_path(self, request: aiohttp.web.Request):
         try:
             body = await request.json()
             logger.info(f"{request.path} -> {body}")
             name = body['Name']
-            return jsonify({
-                "Mountpoint": self.driver.get_path_for(name),
-                "Err": ""
-            })
+            return _jsonify({"Mountpoint": self.driver.get_path_for(name), "Err": ""})
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except DriverError as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_unmount(self, request: aiohttp.web.Request):
         try:
@@ -99,18 +99,18 @@ class Handler:
             name = body['Name']
             vid = body['ID']
             await self.driver.volume_unmount(name, vid)
-            return jsonify({"Err": ""})
+            return _jsonify({"Err": ""})
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except (DriverError, ParserError) as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_get(self, request: aiohttp.web.Request):
         try:
             body = await request.json()
             logger.info(f"{request.path} -> {body}")
             name = body['Name']
-            return jsonify({
+            return _jsonify({
                 "Volume": {
                     "Name": name,
                     "Mountpoint": self.driver.get_path_for(name),
@@ -121,13 +121,13 @@ class Handler:
                 "Err": ""
             })
         except KeyError as e:
-            return jsonify({"Err": f"Missing option: {e}"}, status=400)
+            return _jsonify({"Err": f"Missing option: {e}"}, status=400)
         except DriverError as e:
-            return jsonify({"Err": str(e)}, status=400)
+            return _jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_list(self, request: aiohttp.web.Request):
         logger.info(request.path)
-        return jsonify({
+        return _jsonify({
             "Volumes": [{
                 "Name": name,
                 "Mountpoint": self.driver.get_path_for(name)
@@ -136,28 +136,19 @@ class Handler:
             ""
         })
 
-    async def handle_volumedriver_capabilities(self,
-                                               request: aiohttp.web.Request):
+    async def handle_volumedriver_capabilities(self, request: aiohttp.web.Request):
         logger.info(request.path)
-        return jsonify({"Capabilities": {"Scope": "global"}})
+        return _jsonify({"Capabilities": {"Scope": "global"}})
 
     def install(self, app: aiohttp.web.Application):
         app.add_routes([
             aiohttp.web.post('/Plugin.Activate', self.handle_plugin_activate),
-            aiohttp.web.post('/VolumeDriver.Create',
-                             self.handle_volumedriver_create),
-            aiohttp.web.post('/VolumeDriver.Remove',
-                             self.handle_volumedriver_remove),
-            aiohttp.web.post('/VolumeDriver.Mount',
-                             self.handle_volumedriver_mount),
-            aiohttp.web.post('/VolumeDriver.Path',
-                             self.handle_volumedriver_path),
-            aiohttp.web.post('/VolumeDriver.Unmount',
-                             self.handle_volumedriver_unmount),
-            aiohttp.web.post('/VolumeDriver.Get',
-                             self.handle_volumedriver_get),
-            aiohttp.web.post('/VolumeDriver.List',
-                             self.handle_volumedriver_list),
-            aiohttp.web.post('/VolumeDriver.Capabilities',
-                             self.handle_volumedriver_capabilities),
+            aiohttp.web.post('/VolumeDriver.Create', self.handle_volumedriver_create),
+            aiohttp.web.post('/VolumeDriver.Remove', self.handle_volumedriver_remove),
+            aiohttp.web.post('/VolumeDriver.Mount', self.handle_volumedriver_mount),
+            aiohttp.web.post('/VolumeDriver.Path', self.handle_volumedriver_path),
+            aiohttp.web.post('/VolumeDriver.Unmount', self.handle_volumedriver_unmount),
+            aiohttp.web.post('/VolumeDriver.Get', self.handle_volumedriver_get),
+            aiohttp.web.post('/VolumeDriver.List', self.handle_volumedriver_list),
+            aiohttp.web.post('/VolumeDriver.Capabilities', self.handle_volumedriver_capabilities),
         ])

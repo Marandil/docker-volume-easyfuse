@@ -67,6 +67,14 @@ class DatabaseJSONDecoder(json.JSONDecoder):
 
 
 class MountDatabase:
+    """
+    This class provides transparent access to a json-file-backed mount point and
+    configuration database. Access to the database should be guarded with `async with`,
+    which loads the database file and converts it to appropriate dataclasses, and saves
+    all changes on exit.
+
+    Objects of this class expose dictionary-like API to access objects of type :class:`VolumeSpec`.
+    """
     def __init__(self, dbpath: str):
         self._lock = asyncio.Lock()
         self._path = dbpath

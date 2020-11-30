@@ -74,20 +74,20 @@ class TestDriver(unittest.TestCase):
         # we use python as mount command, with the following command as device
         # to dump the remaining arguments to file
         dc = 'import sys; open(sys.argv[1], "w").write(repr(sys.argv[2:]))'
-        await self.driver.volume_create('vol', {'device': dc, 'opts': '~opts'})
+        await self.driver.volume_create('vol', {'device': '~device', 'opts': '~opts'})
         with self.mntdb.open('r') as f:
             d = json.load(f)
         dropfile_a = self.testdir / "drop-a"
         d['vol']['opts']['mount_command'] = (
-            f'{sys.executable} -c {{device}} '
-            f'{str(dropfile_a)} {{target}} {{opts}} {{driver}}')
+            f'{shlex.quote(sys.executable)} -c {shlex.quote(dc)} '
+            f'{shlex.quote(str(dropfile_a))} {{driver}} {{opts}} {{device}} {{target}}')
         dropfile_b = self.testdir / "drop-b"
         d['vol']['opts']['unmount_command'] = (
-            f'{sys.executable} -c {{device}} '
-            f'{str(dropfile_b)} {{target}} {{opts}} {{driver}}')
+            f'{shlex.quote(sys.executable)} -c {shlex.quote(dc)} '
+            f'{shlex.quote(str(dropfile_b))} {{driver}} {{opts}} {{device}} {{target}}')
         with self.mntdb.open('w') as f:
             json.dump(d, f)
-        args = [str(self.mntpt / 'vol'), "~opts", "fuse"]
+        args = ["fuse", "~opts", "~device", str(self.mntpt / 'vol')]
         await self.driver.volume_mount('vol', 'ffffffffffffffff')
         self.assertTrue(await self.driver.is_mounted('vol'))
         await self.driver.volume_unmount('vol', 'ffffffffffffffff')

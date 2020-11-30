@@ -29,7 +29,7 @@ setup(
     include_package_data=True,
     package_data={'easyfuse': ['systemd/*']},
     data_files=[('share/easyfuse/systemd', [
-        'systemd/easyfuse.socket', 'systemd/easyfuse.service',
-        'systemd/easyfuse.service.dev', 'systemd/easyfuse.service.venv'
+        'systemd/easyfuse.socket', 'systemd/easyfuse.service', 'systemd/easyfuse.service.dev',
+        'systemd/easyfuse.service.venv'
     ])],
 )

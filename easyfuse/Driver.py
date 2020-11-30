@@ -56,8 +56,7 @@ class Driver:
     async def volume_create(self, name: str, opts: dict):
         async with self.mntdb:
             if name in self.mntdb:
-                raise DriverError(
-                    f"Volume {name} already exist, remove it first.")
+                raise DriverError(f"Volume {name} already exist, remove it first.")
             mount_opts = MountOptions(**opts)
             self.mntdb[name] = VolumeSpec(name, [], mount_opts)
 

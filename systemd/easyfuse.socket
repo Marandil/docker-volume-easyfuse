@@ -4,6 +4,7 @@
 
 [Socket]
     ListenStream=/run/docker/plugins/easyfuse.sock
+    SocketMode=0600
 
 [Install]
     WantedBy=docker.service

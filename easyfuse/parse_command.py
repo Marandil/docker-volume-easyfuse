@@ -41,7 +41,20 @@ def _append_mapping(lst, token, mapping):
 
 
 def parse_command(command: str, mapping: MappingType):
-    parser = shlex.shlex(command, punctuation_chars=True)
+    """
+    Parse POSIX-style shell command line into tokens, replacing values in { } with values
+    from mapping. Mapping values are split on newlines, i.e. lists should be passed as
+    newline-delimited strings. All values in [ ] are repeated for cross-product of such
+    lists. Empty strings create no value / empty list. I.e. for command "[-o {value}]",
+    if value is "", an empty list is returned; if value is "value", ["-o", "value"] is
+    returned; if value is "v1\nv2", the result is ["-o", "v1", "-o", "v2"].
+    The resulting list can be fed directly to `subprocess.run` or similar.
+    :param command: string containing input command in POSIX-style shell format (+[] and {}
+                    as described above)
+    :param mapping: str -> str mapping containing at least all { } variables from command.
+    :returns:       list of parsed and substituted tokens.
+    """
+    parser = shlex.shlex(command, punctuation_chars=True, posix=True)
     cmd: List[List[str]] = []
     sub: List[List[str]] = None
     while True:

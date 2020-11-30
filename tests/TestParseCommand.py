@@ -1,4 +1,5 @@
 import unittest
+import shlex
 
 from easyfuse.parse_command import parse_command, ParserError
 
@@ -37,6 +38,12 @@ class TestParseCommand(unittest.TestCase):
         })
         self.assertEqual(
             cmd, ['command', 'tag', 'value1', 'tag', 'value2', 'value3'])
+        
+    def test_parse_escaped(self):
+        test = "import sys; open(sys.argv[1], 'w').write(repr(sys.argv))"
+        ctest = f"/usr/bin/env python {shlex.quote(test)}"
+        cmd = parse_command(ctest, {})
+        self.assertEqual(cmd, ["/usr/bin/env", "python", test])
 
     def test_errors(self):
         with self.assertRaises(ParserError) as ctx:
