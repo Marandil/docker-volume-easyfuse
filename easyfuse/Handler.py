@@ -21,6 +21,7 @@ import json
 import logging
 
 from .Driver import Driver, DriverError
+from .parse_command import ParserError
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class Handler:
             })
         except KeyError as e:
             return jsonify({"Err": f"Missing option: {e}"}, status=400)
-        except DriverError as e:
+        except (DriverError, ParserError) as e:
             return jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_path(self, request: aiohttp.web.Request):
@@ -101,7 +102,7 @@ class Handler:
             return jsonify({"Err": ""})
         except KeyError as e:
             return jsonify({"Err": f"Missing option: {e}"}, status=400)
-        except DriverError as e:
+        except (DriverError, ParserError) as e:
             return jsonify({"Err": str(e)}, status=400)
 
     async def handle_volumedriver_get(self, request: aiohttp.web.Request):

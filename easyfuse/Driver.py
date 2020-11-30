@@ -19,7 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import subprocess
 
-from .MountDatabase import MountDatabase, VolumeSpec
+# Can be removed >= Python 3.9
+from typing import Dict, Union
+
+from .MountDatabase import MountDatabase, VolumeSpec, MountOptions
+from .parse_command import parse_command, MappingType
 
 
 class DriverError(Exception):
@@ -39,7 +43,10 @@ class Driver:
 
     async def is_mounted(self, name):
         async with self.mntdb:
-            return self.mntdb.get_ro(name).is_mounted
+            try:
+                return self.mntdb[name].is_mounted
+            except KeyError:
+                raise DriverError(f"Volume {name} not found.")
 
     @property
     async def volumes(self):
@@ -47,18 +54,30 @@ class Driver:
         Provides a read-only view of the mntdb
         """
         async with self.mntdb:
-            return {key: self.mntdb.get_ro(key) for key in self.mntdb.keys()}
+            return {key: self.mntdb[key] for key in self.mntdb.keys()}
 
     async def volume_create(self, name: str, opts: dict):
         async with self.mntdb:
             if name in self.mntdb:
                 raise DriverError(
                     f"Volume {name} already exist, remove it first.")
-            self.mntdb[name] = VolumeSpec(name, set(), opts)
+            mount_opts = MountOptions(**opts)
+            self.mntdb[name] = VolumeSpec(name, [], mount_opts)
 
     async def volume_remove(self, name: str):
         async with self.mntdb:
-            del self.mntdb[name]
+            try:
+                del self.mntdb[name]
+            except KeyError:
+                raise DriverError(f"Volume {name} not found.")
+
+    def _get_opts(self, vol) -> MappingType:
+        return {
+            "opts": vol.opts.opts,
+            "driver": vol.opts.driver,
+            "target": self.get_path_for(vol.name),
+            "device": vol.opts.device,
+        }
 
     async def volume_mount(self, name: str, vid: str):
         async with self.mntdb:
@@ -66,26 +85,17 @@ class Driver:
                 vol = self.mntdb[name]
             except KeyError:
                 raise DriverError(f"Volume {name} not found.")
-            vol.instances.add(vid)
+            if vid not in vol.instances:
+                vol.instances.append(vid)
             if not vol.is_mounted:
-                # mount -t fuse -o [opts.o] [opts.device] [mountpoint]
-                cmd = ("mount", "-t", "fuse")
+                mapping = self._get_opts(vol)
+                cmd = parse_command(vol.opts.mount_command, mapping)
+                os.makedirs(mapping['target'], mode=0o777, exist_ok=True)
                 try:
-                    cmd += ("-o", vol.opts["o"])
-                except KeyError:
-                    pass
-                try:
-                    cmd += (vol.opts["device"], )
-                except KeyError:
-                    raise DriverError(f"Volume {name} missing option: device")
-                mntpt = self.get_path_for(name)
-                cmd += (mntpt, )
-                try:
-                    os.makedirs(mntpt, mode=0o777, exist_ok=True)
                     subprocess.run(cmd, check=True)
-                    vol.is_mounted = True
                 except subprocess.CalledProcessError as e:
                     raise DriverError(e)
+                vol.is_mounted = True
 
     async def volume_unmount(self, name: str, vid: str):
         async with self.mntdb:
@@ -98,10 +108,11 @@ class Driver:
             except KeyError:
                 raise DriverError(f"Volume ID {vid} not found.")
             if not vol.instances and vol.is_mounted:
-                mntpt = self.get_path_for(name)
+                mapping = self._get_opts(vol)
+                cmd = parse_command(vol.opts.unmount_command, mapping)
                 try:
-                    cmd = ('umount', mntpt)
                     subprocess.run(cmd, check=True)
-                    vol.is_mounted = False
                 except subprocess.CalledProcessError as e:
                     raise DriverError(e)
+                os.rmdir(mapping['target'])
+                vol.is_mounted = False

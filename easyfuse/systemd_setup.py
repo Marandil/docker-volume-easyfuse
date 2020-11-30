@@ -44,7 +44,8 @@ if __name__ == '__main__':
         choices=['local', 'global', 'venv'],
         help="choose which context should be used to call the module")
     argparser.add_argument(
-        '-p', '--path',
+        '-p',
+        '--path',
         type=pathlib.Path,
         default=pathlib.Path('/etc/systemd/system'),
         help="choose where to store systemd unit files; see systemd.unit(5); "

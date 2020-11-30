@@ -11,5 +11,5 @@ volumes:
   nas:
     driver: easyfuse
     driver_opts:
-      o: IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,Port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
+      opts: IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,Port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
       device: "sshfs#$USER@localhost:$PWD/test"

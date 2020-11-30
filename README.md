@@ -145,7 +145,7 @@ volumes:
   nfs:
     driver: easyfuse
     driver_opts:
-      o: IdentityFile=$PWD/my-secret.key,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
+      opts: IdentityFile=$PWD/my-secret.key,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
       device: "sshfs#testuser@localhost:testdir"
 ```
 
@@ -180,7 +180,7 @@ examples$
 ### Verify with a regular named volume
 
 ```
-examples$ docker volume create -d easyfuse -o "o=IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw" -o "device=sshfs#$USER@localhost:$PWD/test" my-volume
+examples$ docker volume create -d easyfuse -o "opts=IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw" -o "device=sshfs#$USER@localhost:$PWD/test" my-volume
 my-volume
 
 examples$ docker run --rm -it -v my-volume:/my-volume busybox ls /my-volume -lah
@@ -210,7 +210,7 @@ volumes:
   nas:
     driver: easyfuse
     driver_opts:
-      o: IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,Port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
+      opts: IdentityFile=$PWD/mini-sshfs/.keys/ssh_user_ed25519_key,UserKnownHostsFile=$PWD/mini-sshfs/known_hosts,Port=2022,uid=1000,gid=1000,users,idmap=user,noatime,allow_other,_netdev,reconnect,rw
       device: "sshfs#$USER@localhost:$PWD/test"
 
 examples$ docker-compose up
