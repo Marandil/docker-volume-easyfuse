@@ -17,12 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import itertools
-import os
-import re
 import shlex
 
 # Can be removed >= Python 3.9
-from typing import List, Union, Mapping
+from typing import List, Mapping
 
 MappingType = Mapping[str, str]
 

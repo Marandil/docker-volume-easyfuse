@@ -19,9 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import subprocess
 
-# Can be removed >= Python 3.9
-from typing import Dict, Union
-
 from .MountDatabase import MountDatabase, VolumeSpec, MountOptions
 from .parse_command import parse_command, MappingType
 

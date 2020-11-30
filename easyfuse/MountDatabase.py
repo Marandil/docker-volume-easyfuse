@@ -22,7 +22,7 @@ import json
 import logging
 
 # Can be removed >= Python 3.9
-from typing import Dict, Set
+from typing import Set
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class MountDatabase:
             self._db = {}
             logger.debug(f"mntdb {self._path} not found -> {s}")
         self._dbhash = hash(s)
+        return self
 
     async def __aexit__(self, exc_type, exc_value, exc_tb):
         s = self._encoder.encode(self._db)
@@ -98,7 +99,7 @@ class MountDatabase:
         self._db = None
         self._lock.release()
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         return key in self._db
 
     def __getitem__(self, key) -> VolumeSpec:
@@ -107,8 +108,9 @@ class MountDatabase:
     def keys(self) -> Set[str]:
         return set(self._db.keys())
 
-    def __setitem__(self, key, value: VolumeSpec):
+    def __setitem__(self, key, value: VolumeSpec) -> VolumeSpec:
         self._db[key] = value
+        return value
 
     def __delitem__(self, key):
         del self._db[key]

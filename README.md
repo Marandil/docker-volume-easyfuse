@@ -10,55 +10,21 @@ Initially, the plugin was developed to allow using SSHFS in scenario, where `vie
 
 Currently, since easyfuse uses `mount` for creating actual fuse volumes, `easyfuse` must be ran as root. This may change in future versions.
 
-## Package dependencies
+## Installation and requirements
 
-It's relatively easy to run `easyfuse` without actually installing the package, nevertheless it 
-requires some non-standard third party Python libraries. To start, simply install module dependencies 
-(see [requirements.txt]), either with
+You can now install the package directly from PyPI with:
 
 ```
-sudo python3 -m pip install -r requirements.txt
+$ python3 -m pip install docker-volume-easyfuse
 ```
 
-or (preferably) with your system package manager, e.g. for Debian/Ubuntu:
+or from GitHub with:
 
 ```
-sudo apt install python3-aiohttp
+$ python3 -m pip install git+https://github.com/Marandil/docker-volume-easyfuse
 ```
 
-When using `pip`, make sure the packages are installed globally, as `easyfuse` currently needs to be ran as root.
-
-## Local installation in virtual environment
-
-`easyfuse` should have no problems working out of a python virtual environment.
-Simply initialize a virtual environment and install the package locally:
-
-```
-$ python3 -m venv venv
-$ source venv/bin/activate
-(venv) $ pip install -e .
-```
-
-This will pull all local requirements, without interfering with the system and system's package
-managers.
-
-When running from venv with `sudo`, you may need to manually point to the venv's python as virtual
-environment variables are not inherited by `sudo`-ed process, see:
-
-```
-# locally installed aiohttp in version 3.5.1, venv installed aiohttp in version 3.7.3:
-(venv) $ python3 -c 'import aiohttp; print(aiohttp.__version__)'
-3.7.3
-(venv) $ sudo python3 -c 'import aiohttp; print(aiohttp.__version__)'
-3.5.1
-```
-
-Instead, simply use `venv/bin/python` explicitly:
-
-```
-(venv) $ sudo venv/bin/python -c 'import aiohttp; print(aiohttp.__version__)'
-3.7.3
-```
+More details are available in the [setup](docs/setup.md) document.
 
 ## Running manually (without installation)
 
@@ -73,47 +39,9 @@ see `python3 -m easyfuse -h` (no `sudo` required) for full list of available opt
 ## Running with `systemd` (with or without installation)
 
 `systemd` folder contains basic systemd unit files for socket activation, either for global and local
-setup.
-Assuming `/etc/systemd/system` as the configuration path of choice, typical activation for a local setup would be:
+setup. `easyfuse` also contains a script called `easyfuse.systemd_setup` that automates the process. 
+You can find more info in the [systemd_configuration](docs/systemd_configuration.md) document.
 
-```
-$ SYSTEMD_UNIT_TARGET=/etc/systemd/system
-$ sudo cp systemd/easyfuse.socket $SYSTEMD_UNIT_TARGET/
-$ WORKDIR=$PWD envsubst '$WORKDIR' < systemd/easyfuse.service.dev | sudo tee $SYSTEMD_UNIT_TARGET/easyfuse.service
-$ sudo systemctl daemon-reload
-$ sudo systemctl start easyfuse.socket
-```
-
-When using virtualenv, use the appropriate config:
-
-```
-(venv) $ SYSTEMD_UNIT_TARGET=/etc/systemd/system
-(venv) $ sudo cp systemd/easyfuse.socket $SYSTEMD_UNIT_TARGET/
-(venv) $ envsubst '$VIRTUAL_ENV' < systemd/easyfuse.service.venv | sudo tee $SYSTEMD_UNIT_TARGET/easyfuse.service
-(venv) $ sudo systemctl daemon-reload
-(venv) $ sudo systemctl start easyfuse.socket
-```
-
-For a global installation (i.e. if you can call `python3 -m easyfuse -h` as root from anywhere, without virtual environment), simply use:
-
-```
-$ SYSTEMD_UNIT_TARGET=/etc/systemd/system
-$ sudo cp systemd/easyfuse.socket  $SYSTEMD_UNIT_TARGET/
-$ sudo cp systemd/easyfuse.service $SYSTEMD_UNIT_TARGET/
-$ sudo systemctl daemon-reload
-$ sudo systemctl start easyfuse.socket
-```
-
-### Automatic systemd setup
-
-`easyfuse` provides a simple automatic `systemd` setup via `easyfuse.systemd_setup` script-module. 
-See `python3 -m easyfuse.systemd_setup -h` for reference. Remember that when using `sudo` with `venv`,
-you need to use the `venv` symlink instead of `python3`:
-
-```
-(venv) $ sudo python3 -m easyfuse.systemd_setup venv          # <- this will install using the global python
-(venv) $ sudo venv/bin/python3 -m easyfuse.systemd_setup venv # <- this will install using the local venv
-```
 
 ## Using `easyfuse` with docker volume
 
